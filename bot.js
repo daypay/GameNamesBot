@@ -1,7 +1,10 @@
 //TODO
-//1. Add help with information on commands
+//1. Add error checking if someone enters proper command without proper arguents
+//  --- !psn
+//  --- with nothing following it
+//2. Add help with information on commands
 //  --- to remove a username, just do the command with the last argument blank
-//2. Add ability to remove user completely
+//3. Add ability to remove user completely
 
 var Discord = require('discord.io');
 var logger = require('winston');
@@ -23,6 +26,22 @@ var userdata = {
 
 var userArray = [];
 let userCount = 0;
+var userHelp = "Below are the list of commands for Game Names Bot\n \
+    !adduser\n \
+            adds a user (first & last name separated by a space) and any\n \
+            corresponding psn, nintendo, xbox, and steam usernames\n \
+            Ex.:  !adduser John Doe psn johnnydoe steam doej\n \
+    !all\n \
+            Display all users and usernames in system\n \
+    !allpsn  !allnintendo   !allxbox   !allsteam\n \
+            Displays all users and corresponding usernames for the specified system\n \
+    !psn    !nintendo   !xbox   !steam\n \
+            Adds the user (first & last name separated by a space) and username for\n \
+            the specified system to the database\n \
+            Ex.:  !psn John Doe johnnydoe\n \
+    !userinfo\n \
+            Displays the information of the specified user (first & last name separated by a space)\n \
+            Ex.:  !userinfo John Doe\n";
 
 // Initialize Discord Bot
 var bot = new Discord.Client({
@@ -82,8 +101,10 @@ bot.on('message', function (user, userID, channelID, message, evt) {
         });
 
         let data = fs.readFileSync(filename);
-        userArray = JSON.parse(data);
-        userCount = userArray.length;
+        if (data.length) {
+            userArray = JSON.parse(data);
+            userCount = userArray.length;
+        }
     }
 
     // Our bot needs to know if it will execute a command
@@ -98,6 +119,14 @@ bot.on('message', function (user, userID, channelID, message, evt) {
         user = args[0] + " " + args[1];
 
         switch (cmd) {
+            case 'gnbhelp':
+                {
+                    bot.sendMessage({
+                        to: channelID,
+                        message: userHelp
+                    });
+                    break;
+                }
             case 'psn':
                 {
                     addUsername(user, "psn", args[2]);
@@ -139,7 +168,6 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                                     userArray[i].psn + "\nnintendo: " + userArray[i].nintendo + "\nxbox: " +
                                     userArray[i].xbox + "\nsteam: " + userArray[i].steam
                             });
-                            break;
                         }
                     }
                     break;
@@ -244,6 +272,13 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                         });
                     }
                     break;
+                }
+            default:
+                {
+                    bot.sendMessage({
+                        to: channelID,
+                        message: "Type !gnbhelp for a list of Game Names Bots commands"
+                    });
                 }
 
         }
