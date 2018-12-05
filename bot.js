@@ -1,14 +1,11 @@
 //TODO
-//1. Add error checking if someone enters proper command without proper arguents
-//  --- !psn
-//  --- with nothing following it
-//2. Add help with information on commands
-//  --- to remove a username, just do the command with the last argument blank
-//3. Add ability to remove user completely
+//1. Add ability to remove user completely
+//2. Add ability to look up user's discord nickname based on game names
 
-var Discord = require('discord.io');
+var Discord = require('discord.js');
 var logger = require('winston');
-var auth = require('./auth.json');
+const config = require("./config.json");
+
 // Configure logger settings
 logger.remove(logger.transports.Console);
 logger.add(new logger.transports.Console, {
@@ -27,267 +24,261 @@ var userdata = {
 var userArray = [];
 let userCount = 0;
 var userHelp = "Below are the list of commands for Game Names Bot\n \
-    !adduser\n \
-            adds a user (first & last name separated by a space) and any\n \
-            corresponding psn, nintendo, xbox, and steam usernames\n \
-            Ex.:  !adduser John Doe psn johnnydoe steam doej\n \
-    !all\n \
+    +all\n \
             Display all users and usernames in system\n \
-    !allpsn  !allnintendo   !allxbox   !allsteam\n \
+    +allpsn  +allnintendo   +allxbox   +allsteam\n \
             Displays all users and corresponding usernames for the specified system\n \
-    !psn    !nintendo   !xbox   !steam\n \
-            Adds the user (first & last name separated by a space) and username for\n \
-            the specified system to the database\n \
-            Ex.:  !psn John Doe johnnydoe\n \
-    !userinfo\n \
-            Displays the information of the specified user (first & last name separated by a space)\n \
-            Ex.:  !userinfo John Doe\n";
-
-// Initialize Discord Bot
-var bot = new Discord.Client({
-    token: auth.token,
-    autorun: true
-});
-bot.on('ready', function (evt) {
-    logger.info('Connected');
-    logger.info('Logged in as: ');
-    logger.info(bot.username + ' - (' + bot.id + ')');
-});
+    +psn    +nintendo   +xbox   +steam\n \
+            Adds your username for the specified system to the database for the user typing the command\n \
+            Ex.:  +psn johnnydoe\n \
+    +userinfo\n \
+            Displays the information of the specified user (using nickanme in the server)\n \
+            Ex.:  +userinfo John Doe\n";
 
 function addUsername(user, type, username) {
     let userExists = false;
-    userArray[userCount] = {
-        "user": "",
-        "psn": "",
-        "nintendo": "",
-        "xbox": "",
-        "steam": ""
-    };
 
     for (let i = 0; i < userCount; ++i) {
-        console.log(userArray[i].user);
         if (user === userArray[i].user) {
             userArray[i][type] = username;
-            console.log("User " + type + " saved");
             userExists = true;
         }
     }
 
     if (!userExists) {
-        console.log("Created new user");
+        userArray[userCount] = {
+            "user": "",
+            "psn": "",
+            "nintendo": "",
+            "xbox": "",
+            "steam": ""
+        };
+
         userArray[userCount]['user'] = user;
         userArray[userCount][type] = username;
         ++userCount;
     }
 }
 
-bot.on('message', function (user, userID, channelID, message, evt) {
+const client = new Discord.Client();
+
+client.on("ready", () => {
+    // This event will run if the bot starts, and logs in, successfully.
+    console.log(`Bot has started, with ${client.users.size} users, in ${client.channels.size} channels of ${client.guilds.size} guilds.`);
+
+    // Example of changing the bot's playing game to something useful. `client.user` is what the
+    // docs refer to as the "ClientUser".
+    client.user.setActivity(`Serving ${client.guilds.size} servers`);
+});
+
+client.on("message", async message => {
+    // This event will run on every single message received, from any channel or DM.
+
+    // It's good practice to ignore other bots. This also makes your bot ignore itself
+    // and not get into a spam loop (we call that "botception").
+    if (message.author.bot) return;
+
+    // Also good practice to ignore any message that does not start with our prefix, 
+    // which is set in the configuration file.
+    if (message.content.indexOf(config.prefix) !== 0) return;
+
+    // Here we separate our "command" name, and our "arguments" for the command. 
+    // e.g. if we have the message "+say Is this the real life?" , we'll get the following:
+    // command = say
+    // args = ["Is", "this", "the", "real", "life?"]
+    const args = message.content.slice(config.prefix.length).trim().split(/ +/g);
+    const command = args.shift().toLowerCase();
+
+
     var fs = require('fs');
     var buf = Buffer.alloc(1024);
 
-    /*fs.open(channelID + '.txt', 'w+', function (err, file) {
-        if (err) throw err;
-        console.log(channelID + 'File Found/Created!');
-    });*/
-    let filename = channelID + '.txt';
+    let filename = message.channel + '.txt';
 
-    // If the userArray hasn't been filled, fill with file data
-    if (!userArray.length) {
-        fs.open(filename, 'a+', function (err, fd) {
-            if (err) {
-                return console.error(err);
-            }
-            console.log("File created/opened successfully!");
-        });
-
+    if (fs.existsSync(filename)) {
         let data = fs.readFileSync(filename);
         if (data.length) {
             userArray = JSON.parse(data);
             userCount = userArray.length;
         }
+    } else {
+        fs.writeFile(filename, JSON.stringify(userArray, null, 2), 'utf-8', function (err, file) {
+            if (err) {
+                console.log('Issue Writing File for channel: ' + message.channel);
+                throw err;
+            }
+        });
     }
 
-    // Our bot needs to know if it will execute a command
-    // It will listen for messages that will start with `!`
-    if (message.substring(0, 1) == '!') {
-        var args = message.substring(1).split(' ');
-        var cmd = args[0];
+    //User ID will never change even when nicknames and usernames change
+    //use this to identify the personal data
+    user = message.author.id;
 
-        args = args.splice(1);
-        console.log("User Count: " + userCount);
+    switch (command) {
+        case 'gnbhelp':
+            {
+                message.channel.send(userHelp);
+                break;
+            }
+        case 'psn':
+            {
+                if (args.length > 0) {
+                    addUsername(user, "psn", args[0]);
+                } else {
+                    message.channel.send("Incorrect use of command.");
+                    message.channel.send("Type +gnbhelp for a list of Game Names Bots commands");
+                }
+                break;
+            }
+        case 'nintendo':
+            {
+                if (args.length > 0) {
+                    addUsername(user, "nintendo", args[0]);
+                } else {
+                    message.channel.send("Incorrect use of command.");
+                    message.channel.send("Type +gnbhelp for a list of Game Names Bots commands");
+                }
+                break;
+            }
+        case 'xbox':
+            {
+                if (args.length > 0) {
+                    addUsername(user, "xbox", args[0]);
+                } else {
+                    message.channel.send("Incorrect use of command.");
+                    message.channel.send("Type +gnbhelp for a list of Game Names Bots commands");
+                }
+                break;
+            }
+        case 'steam':
+            {
+                if (args.length > 0) {
+                    addUsername(user, "steam", args[0]);
+                } else {
+                    message.channel.send("Incorrect use of command.");
+                    message.channel.send("Type +gnbhelp for a list of Game Names Bots commands");
+                }
+                break;
+            }
+        case 'userinfo':
+            {
+                let userFound = false;
+                for (let i = 0; i < userCount; ++i) {
+                    let userNickname = "";
+                    if (args.length > 0) {
+                        userNickname = args[0];
+                    }
+                    for (let x = 1; x < args.length; ++x) {
+                        userNickname = userNickname + " " + args[x];
+                    }
+                    if (message.guild.members.get(userArray[i].user).displayName === userNickname) {
+                        userFound = true;
+                        message.channel.send(
+                            "\n--------------------\n" + message.guild.members.get(userArray[i].user).displayName +
+                            "\n--------------------\npsn: " +
+                            userArray[i].psn + "\nnintendo: " + userArray[i].nintendo + "\nxbox: " +
+                            userArray[i].xbox + "\nsteam: " + userArray[i].steam
+                        );
+                    }
 
-        user = args[0] + " " + args[1];
+                    if (!userFound) {
+                        message.channel.send("User info not found");
+                    }
+                }
+                break;
+            }
+        case 'all':
+            {
+                for (let i = 0; i < userCount; ++i) {
+                    message.channel.send(
+                        "\n--------------------\n" + message.guild.members.get(userArray[i].user).displayName +
+                        "\n--------------------\npsn: " +
+                        userArray[i].psn + "\nnintendo: " + userArray[i].nintendo + "\nxbox: " +
+                        userArray[i].xbox + "\nsteam: " + userArray[i].steam + "\n\n"
+                    );
+                }
+                break;
+            }
+        case 'allpsn':
+            {
+                let displayed = false;
 
-        switch (cmd) {
-            case 'gnbhelp':
-                {
+                for (let i = 0; i < userCount; ++i) {
+                    if (userArray[i].psn != "") {
+                        message.channel.send(message.guild.members.get(userArray[i].user).displayName + ": " + userArray[i].psn + "\n");
+                        displayed = true;
+                    }
+                }
+
+                if (!displayed) {
+                    message.channel.send("No Users to Display");
+                }
+                break;
+            }
+        case 'allnintendo':
+            {
+                let displayed = false;
+
+                for (let i = 0; i < userCount; ++i) {
+                    if (userArray[i].nintendo != "") {
+                        message.channel.send(message.guild.members.get(userArray[i].user).displayName + ": " + userArray[i].nintendo + "\n");
+                        displayed = true;
+                    }
+                }
+
+                if (!displayed) {
+                    message.channel.send("No Users to Display");
+                }
+                break;
+            }
+        case 'allxbox':
+            {
+                let displayed = false;
+
+                for (let i = 0; i < userCount; ++i) {
+                    if (userArray[i].xbox != "") {
+                        message.channel.send(message.guild.members.get(userArray[i].user).displayName + ": " + userArray[i].xbox + "\n");
+                        displayed = true;
+                    }
+                }
+
+                if (!displayed) {
                     bot.sendMessage({
                         to: channelID,
-                        message: userHelp
-                    });
-                    break;
-                }
-            case 'psn':
-                {
-                    addUsername(user, "psn", args[2]);
-                    break;
-                }
-            case 'nintendo':
-                {
-                    addUsername(user, "nintendo", args[2]);
-                    break;
-                }
-            case 'xbox':
-                {
-                    addUsername(user, "xbox", args[2]);
-                    break;
-                }
-            case 'steam':
-                {
-                    addUsername(user, "steam", args[2]);
-                    break;
-                }
-            case 'adduser':
-                {
-                    for (let i = 2; i < args.length; ++i) {
-                        if (args[i] === "psn" || args[i] === "nintendo" ||
-                            args[i] === "xbox" || args[i] === "steam") {
-                            addUsername(user, args[i], args[i + 1]);
-                        }
-                    }
-                    break;
-                }
-            case 'userinfo':
-                {
-                    for (let i = 0; i < userCount; ++i) {
-                        if (userArray[i].user === user) {
-                            bot.sendMessage({
-                                to: channelID,
-                                message: "\n--------------------\n" + userArray[i].user +
-                                    "\n--------------------\npsn: " +
-                                    userArray[i].psn + "\nnintendo: " + userArray[i].nintendo + "\nxbox: " +
-                                    userArray[i].xbox + "\nsteam: " + userArray[i].steam
-                            });
-                        }
-                    }
-                    break;
-                }
-            case 'all':
-                {
-                    for (let i = 0; i < userCount; ++i) {
-                        bot.sendMessage({
-                            to: channelID,
-                            message: "\n--------------------\n" + userArray[i].user +
-                                "\n--------------------\npsn: " +
-                                userArray[i].psn + "\nnintendo: " + userArray[i].nintendo + "\nxbox: " +
-                                userArray[i].xbox + "\nsteam: " + userArray[i].steam + "\n\n"
-                        });
-                    }
-                    break;
-                }
-            case 'allpsn':
-                {
-                    let displayed = false;
-
-                    for (let i = 0; i < userCount; ++i) {
-                        if (userArray[i].psn != "") {
-                            bot.sendMessage({
-                                to: channelID,
-                                message: userArray[i].user + ": " + userArray[i].psn + "\n"
-                            });
-                            displayed = true;
-                        }
-                    }
-
-                    if (!displayed) {
-                        bot.sendMessage({
-                            to: channelID,
-                            message: "No Users to Display"
-                        });
-                    }
-                    break;
-                }
-            case 'allnintendo':
-                {
-                    let displayed = false;
-
-                    for (let i = 0; i < userCount; ++i) {
-                        if (userArray[i].nintendo != "") {
-                            bot.sendMessage({
-                                to: channelID,
-                                message: userArray[i].user + ": " + userArray[i].nintendo + "\n"
-                            });
-                            displayed = true;
-                        }
-                    }
-
-                    if (!displayed) {
-                        bot.sendMessage({
-                            to: channelID,
-                            message: "No Users to Display"
-                        });
-                    }
-                    break;
-                }
-            case 'allxbox':
-                {
-                    let displayed = false;
-
-                    for (let i = 0; i < userCount; ++i) {
-                        if (userArray[i].xbox != "") {
-                            bot.sendMessage({
-                                to: channelID,
-                                message: userArray[i].user + ": " + userArray[i].xbox + "\n"
-                            });
-                            displayed = true;
-                        }
-                    }
-
-                    if (!displayed) {
-                        bot.sendMessage({
-                            to: channelID,
-                            message: "No Users to Display"
-                        });
-                    }
-                    break;
-                }
-            case 'allsteam':
-                {
-                    let displayed = false;
-
-                    for (let i = 0; i < userCount; ++i) {
-                        if (userArray[i].steam != "") {
-                            bot.sendMessage({
-                                to: channelID,
-                                message: userArray[i].user + ": " + userArray[i].steam + "\n"
-                            });
-                            displayed = true;
-                        }
-                    }
-
-                    if (!displayed) {
-                        bot.sendMessage({
-                            to: channelID,
-                            message: "No Users to Display"
-                        });
-                    }
-                    break;
-                }
-            default:
-                {
-                    bot.sendMessage({
-                        to: channelID,
-                        message: "Type !gnbhelp for a list of Game Names Bots commands"
+                        message: "No Users to Display"
                     });
                 }
+                break;
+            }
+        case 'allsteam':
+            {
+                let displayed = false;
 
-        }
+                for (let i = 0; i < userCount; ++i) {
+                    if (userArray[i].steam != "") {
+                        message.channel.send(message.guild.members.get(userArray[i].user).displayName + ": " + userArray[i].steam + "\n");
+                        displayed = true;
+                    }
+                }
+
+                if (!displayed) {
+                    message.channel.send("No Users to Display");
+                }
+                break;
+            }
+        default:
+            {
+                message.channel.send("Type +gnbhelp for a list of Game Names Bots commands");
+            }
+
     }
 
     fs.writeFile(filename, JSON.stringify(userArray, null, 2), 'utf-8', function (err, file) {
         if (err) {
-            console.log(channelID + ' Issue Writing File');
+            console.log('Issue Writing File for channel: ' + message.channel);
             throw err;
         }
     });
 });
+
+client.login(config.token);
