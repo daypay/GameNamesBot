@@ -1,6 +1,3 @@
-//TODO
-//1. Add ability to remove user completely
-
 var Discord = require('discord.js');
 var logger = require('winston');
 const config = require("./config.json");
@@ -308,6 +305,38 @@ client.on("message", async message => {
                 if (!userFound) {
                     message.channel.send("User info not found");
                 }
+                break;
+            }
+        case 'gnbremove':
+            {
+                break;
+            }
+        case 'cleanup':
+            {
+                let totalCleaned = 0;
+                for (let i = 0; i < userCount; ++i) {
+                    let userFound = false;
+
+                    for (let u = 0; u < client.users.size; ++u) {
+                        if (client.users.array()[u].id === userArray[i].user) {
+                            userFound = true;
+                        }
+                    }
+
+                    if (userFound === false) {
+                        //Remove user from the server, ID was not found
+                        userArray.splice(u, 1);
+
+                        //Do not advance u this time in the loop, (ex. what was in position
+                        //4 will now be position 3, so we need to look at 3 again)
+                        --userCount;
+                        --u;
+                        ++totalCleaned;
+                    }
+                }
+
+                message.channel.send("Cleaned out " + totalCleaned + " users' data");
+
                 break;
             }
         default:
