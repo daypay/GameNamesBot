@@ -9,29 +9,28 @@ logger.add(new logger.transports.Console, {
 });
 logger.level = 'debug';
 
-var userdata = {
-    "user": "",
-    "psn": "",
-    "nintendo": "",
-    "xbox": "",
-    "steam": ""
-};
-
 var userArray = [];
 let userCount = 0;
 var userHelp = "Below are the list of commands for Game Names Bot\n \
     +all\n \
             Display all users and usernames in system\n \
-    +allpsn  +allnintendo   +allxbox   +allsteam\n \
+    +allpsn  +allnintendo   +allxbox   +allsteam    +allepic    +allorigin  +allpokemonGo\n \
             Displays all users and corresponding usernames for the specified system\n \
-    +psn    +nintendo   +xbox   +steam\n \
+    +psn    +nintendo   +xbox   +steam  +epic   +origin     +pokemonGo\n \
             Adds your username for the specified system to the database for the user typing the command\n \
             Ex.:  +psn johnnydoe\n \
+    +custom\n \
+            Adds a custom type to the user database for you.\
+            Ex.   +custom instagram johndoe\
     +userinfo\n \
             Displays the information of the specified user (using nickanme in the server)\n \
             Ex.:  +userinfo John Doe\n \
     +whois\n \
-            Displays the discord user nickname (in this channel) that matches the given game system name\n";
+            Displays the discord user nickname (in this channel) that matches the given game system name\n \
+    +gnbremove\n \
+            Removes your user data from the database\n \
+    +cleanup\n \
+            Cleans out data for users no longer in the server\n";
 
 function addUsername(user, type, username) {
     let userExists = false;
@@ -49,7 +48,10 @@ function addUsername(user, type, username) {
             "psn": "",
             "nintendo": "",
             "xbox": "",
-            "steam": ""
+            "steam": "",
+            "epic": "",
+            "origin": "",
+            "pokemonGo": ""
         };
 
         userArray[userCount]['user'] = user;
@@ -151,7 +153,55 @@ client.on("message", async message => {
         case 'steam':
             {
                 if (args.length > 0) {
-                    addUsername(user, "steam", args[0]);
+                    let steamUser = args[0];
+                    for (let x = 1; x < args.length; ++x) {
+                        steamUser = steamUser + " " + args[x];
+                    }
+                    addUsername(user, "steam", steamUser);
+                } else {
+                    message.channel.send("Incorrect use of command.");
+                    message.channel.send("Type +gnbhelp for a list of Game Names Bots commands");
+                }
+                break;
+            }
+        case 'epic':
+            {
+                if (args.length > 0) {
+                    addUsername(user, "epic", args[0]);
+                } else {
+                    message.channel.send("Incorrect use of command.");
+                    message.channel.send("Type +gnbhelp for a list of Game Names Bots commands");
+                }
+                break;
+            }
+        case 'origin':
+            {
+                if (args.length > 0) {
+                    addUsername(user, "origin", args[0]);
+                } else {
+                    message.channel.send("Incorrect use of command.");
+                    message.channel.send("Type +gnbhelp for a list of Game Names Bots commands");
+                }
+                break;
+            }
+        case 'pokemonGo':
+            {
+                if (args.length > 0) {
+                    addUsername(user, "pokemonGo", args[0]);
+                } else {
+                    message.channel.send("Incorrect use of command.");
+                    message.channel.send("Type +gnbhelp for a list of Game Names Bots commands");
+                }
+                break;
+            }
+        case 'custom':
+            {
+                if (args.length >= 2) {
+                    let customUser = args[1];
+                    for (let x = 2; x < args.length; ++x) {
+                        customUser = customUser + " " + args[x];
+                    }
+                    addUsername(user, args[0], customUser);
                 } else {
                     message.channel.send("Incorrect use of command.");
                     message.channel.send("Type +gnbhelp for a list of Game Names Bots commands");
@@ -160,6 +210,7 @@ client.on("message", async message => {
             }
         case 'userinfo':
             {
+                let textMessage = "";
                 let userFound = false;
                 for (let i = 0; i < userCount; ++i) {
                     let userNickname = "";
@@ -171,35 +222,47 @@ client.on("message", async message => {
                     }
                     if (message.guild.members.get(userArray[i].user).displayName === userNickname) {
                         userFound = true;
-                        message.channel.send(
-                            "\n--------------------\n" + message.guild.members.get(userArray[i].user).displayName +
-                            "\n--------------------\npsn: " +
-                            userArray[i].psn + "\nnintendo: " + userArray[i].nintendo + "\nxbox: " +
-                            userArray[i].xbox + "\nsteam: " + userArray[i].steam
-                        );
+                        textMessage += "\n--------------------\n" + message.guild.members.get(userArray[i].user).displayName +
+                            "\n--------------------";
+
+                        for (type in userArray[i]) {
+                            if (userArray[i][type]) {
+                                textMessage += "\n" + type + ": " + userArray[i][type];
+                            }
+                        }
                     }
                 }
 
                 if (!userFound) {
                     message.channel.send("User info not found");
+                } else {
+                    message.channel.send(textMessage);
+
                 }
                 break;
             }
         case 'all':
             {
+                let textMessage = "";
                 for (let i = 0; i < userCount; ++i) {
-                    message.channel.send(
-                        "\n--------------------\n" + message.guild.members.get(userArray[i].user).displayName +
-                        "\n--------------------\npsn: " +
-                        userArray[i].psn + "\nnintendo: " + userArray[i].nintendo + "\nxbox: " +
-                        userArray[i].xbox + "\nsteam: " + userArray[i].steam + "\n\n"
-                    );
+
+                    textMessage += "\n--------------------\n" + message.guild.members.get(userArray[i].user).displayName +
+                        "\n--------------------";
+
+                    for (type in userArray[i]) {
+                        if (userArray[i][type]) {
+                            textMessage += "\n" + type + ": " + userArray[i][type];
+                        }
+                    }
                 }
+
+                message.channel.send(textMessage);
                 break;
             }
         case 'allpsn':
             {
                 let displayed = false;
+                message.channel.send("All PSN Users\n--------------------\n");
 
                 for (let i = 0; i < userCount; ++i) {
                     if (userArray[i].psn != "") {
@@ -216,6 +279,7 @@ client.on("message", async message => {
         case 'allnintendo':
             {
                 let displayed = false;
+                message.channel.send("All Nintendo Users\n--------------------\n");
 
                 for (let i = 0; i < userCount; ++i) {
                     if (userArray[i].nintendo != "") {
@@ -232,6 +296,7 @@ client.on("message", async message => {
         case 'allxbox':
             {
                 let displayed = false;
+                message.channel.send("All Xbox Users\n--------------------\n");
 
                 for (let i = 0; i < userCount; ++i) {
                     if (userArray[i].xbox != "") {
@@ -251,10 +316,62 @@ client.on("message", async message => {
         case 'allsteam':
             {
                 let displayed = false;
+                message.channel.send("All Steam Users\n--------------------\n");
 
                 for (let i = 0; i < userCount; ++i) {
                     if (userArray[i].steam != "") {
                         message.channel.send(message.guild.members.get(userArray[i].user).displayName + ": " + userArray[i].steam + "\n");
+                        displayed = true;
+                    }
+                }
+
+                if (!displayed) {
+                    message.channel.send("No Users to Display");
+                }
+                break;
+            }
+        case 'allepic':
+            {
+                let displayed = false;
+                message.channel.send("All Epic Users\n--------------------\n");
+
+                for (let i = 0; i < userCount; ++i) {
+                    if (userArray[i].epic != "") {
+                        message.channel.send(message.guild.members.get(userArray[i].user).displayName + ": " + userArray[i].epic + "\n");
+                        displayed = true;
+                    }
+                }
+
+                if (!displayed) {
+                    message.channel.send("No Users to Display");
+                }
+                break;
+            }
+        case 'allorigin':
+            {
+                let displayed = false;
+                message.channel.send("All Origin Users\n--------------------\n");
+
+                for (let i = 0; i < userCount; ++i) {
+                    if (userArray[i].origin != "") {
+                        message.channel.send(message.guild.members.get(userArray[i].user).displayName + ": " + userArray[i].origin + "\n");
+                        displayed = true;
+                    }
+                }
+
+                if (!displayed) {
+                    message.channel.send("No Users to Display");
+                }
+                break;
+            }
+        case 'allpokemonGo':
+            {
+                let displayed = false;
+                message.channel.send("All Pokemon Go Users\n--------------------\n");
+
+                for (let i = 0; i < userCount; ++i) {
+                    if (userArray[i].pokemonGo != "") {
+                        message.channel.send(message.guild.members.get(userArray[i].user).displayName + ": " + userArray[i].pokemonGo + "\n");
                         displayed = true;
                     }
                 }
@@ -300,6 +417,24 @@ client.on("message", async message => {
                         message.channel.send(message.guild.members.get(userArray[i].user).displayName +
                             " (steam): " + userArray[i].steam + "\n");
                     }
+
+                    if (userArray[i].steam === userGameName) {
+                        userFound = true;
+                        message.channel.send(message.guild.members.get(userArray[i].user).displayName +
+                            " (epic): " + userArray[i].epic + "\n");
+                    }
+
+                    if (userArray[i].steam === userGameName) {
+                        userFound = true;
+                        message.channel.send(message.guild.members.get(userArray[i].user).displayName +
+                            " (origin): " + userArray[i].origin + "\n");
+                    }
+
+                    if (userArray[i].steam === userGameName) {
+                        userFound = true;
+                        message.channel.send(message.guild.members.get(userArray[i].user).displayName +
+                            " (pokemonGo): " + userArray[i].pokemonGo + "\n");
+                    }
                 }
 
                 if (!userFound) {
@@ -309,6 +444,20 @@ client.on("message", async message => {
             }
         case 'gnbremove':
             {
+                let userFound = false;
+                for (let i = 0; i < userCount; ++i) {
+                    if (user === userArray[i].user) {
+                        userFound = true;
+                        userArray.splice(i, 1);
+                        break;
+                    }
+                }
+
+                if (userFound === true) {
+                    message.channel.send("Data for " + message.author + " removed from database");
+                } else {
+                    message.channel.send("No user data found in database");
+                }
                 break;
             }
         case 'cleanup':
@@ -319,18 +468,19 @@ client.on("message", async message => {
 
                     for (let u = 0; u < client.users.size; ++u) {
                         if (client.users.array()[u].id === userArray[i].user) {
+                            console.log("Found a user");
                             userFound = true;
                         }
                     }
 
                     if (userFound === false) {
                         //Remove user from the server, ID was not found
-                        userArray.splice(u, 1);
+                        userArray.splice(i, 1);
 
                         //Do not advance u this time in the loop, (ex. what was in position
                         //4 will now be position 3, so we need to look at 3 again)
                         --userCount;
-                        --u;
+                        --i;
                         ++totalCleaned;
                     }
                 }
