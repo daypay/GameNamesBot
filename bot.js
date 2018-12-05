@@ -1,6 +1,5 @@
 //TODO
 //1. Add ability to remove user completely
-//2. Add ability to look up user's discord nickname based on game names
 
 var Discord = require('discord.js');
 var logger = require('winston');
@@ -33,7 +32,9 @@ var userHelp = "Below are the list of commands for Game Names Bot\n \
             Ex.:  +psn johnnydoe\n \
     +userinfo\n \
             Displays the information of the specified user (using nickanme in the server)\n \
-            Ex.:  +userinfo John Doe\n";
+            Ex.:  +userinfo John Doe\n \
+    +whois\n \
+            Displays the discord user nickname (in this channel) that matches the given game system name\n";
 
 function addUsername(user, type, username) {
     let userExists = false;
@@ -180,10 +181,10 @@ client.on("message", async message => {
                             userArray[i].xbox + "\nsteam: " + userArray[i].steam
                         );
                     }
+                }
 
-                    if (!userFound) {
-                        message.channel.send("User info not found");
-                    }
+                if (!userFound) {
+                    message.channel.send("User info not found");
                 }
                 break;
             }
@@ -263,6 +264,49 @@ client.on("message", async message => {
 
                 if (!displayed) {
                     message.channel.send("No Users to Display");
+                }
+                break;
+            }
+        case 'whois':
+            {
+                let userFound = false;
+
+                for (let i = 0; i < userCount; ++i) {
+                    let userGameName = "";
+                    if (args.length > 0) {
+                        userGameName = args[0];
+                    }
+                    for (let x = 1; x < args.length; ++x) {
+                        userGameName = userGameName + " " + args[x];
+                    }
+
+                    if (userArray[i].psn === userGameName) {
+                        userFound = true;
+                        message.channel.send(message.guild.members.get(userArray[i].user).displayName +
+                            " (psn): " + userArray[i].psn + "\n");
+                    }
+
+                    if (userArray[i].nintendo === userGameName) {
+                        userFound = true;
+                        message.channel.send(message.guild.members.get(userArray[i].user).displayName +
+                            " (nintendo): " + userArray[i].nintendo + "\n");
+                    }
+
+                    if (userArray[i].xbox === userGameName) {
+                        userFound = true;
+                        message.channel.send(message.guild.members.get(userArray[i].user).displayName +
+                            " (xbox): " + userArray[i].xbox + "\n");
+                    }
+
+                    if (userArray[i].steam === userGameName) {
+                        userFound = true;
+                        message.channel.send(message.guild.members.get(userArray[i].user).displayName +
+                            " (steam): " + userArray[i].steam + "\n");
+                    }
+                }
+
+                if (!userFound) {
+                    message.channel.send("User info not found");
                 }
                 break;
             }
