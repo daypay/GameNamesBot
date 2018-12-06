@@ -133,7 +133,11 @@ client.on("message", async message => {
         case 'nintendo':
             {
                 if (args.length > 0) {
-                    addUsername(user, "nintendo", args[0]);
+                    let nintendoUser = args[0];
+                    for (let x = 1; x < args.length; ++x) {
+                        nintendoUser = nintendoUser + " " + args[x];
+                    }
+                    addUsername(user, "nintendo", nintendoUser);
                 } else {
                     message.channel.send("Incorrect use of command.");
                     message.channel.send("Type +gnbhelp for a list of Game Names Bots commands");
@@ -184,10 +188,14 @@ client.on("message", async message => {
                 }
                 break;
             }
-        case 'pokemonGo':
+        case 'pokemongo':
             {
                 if (args.length > 0) {
-                    addUsername(user, "pokemonGo", args[0]);
+                    let pokemonUser = args[0];
+                    for (let x = 1; x < args.length; ++x) {
+                        pokemonUser = pokemonUser + " " + args[x];
+                    }
+                    addUsername(user, "pokemongo", pokemonUser);
                 } else {
                     message.channel.send("Incorrect use of command.");
                     message.channel.send("Type +gnbhelp for a list of Game Names Bots commands");
@@ -226,7 +234,7 @@ client.on("message", async message => {
                             "\n--------------------";
 
                         for (type in userArray[i]) {
-                            if (userArray[i][type]) {
+                            if (userArray[i][type] && type != "user") {
                                 textMessage += "\n" + type + ": " + userArray[i][type];
                             }
                         }
@@ -250,7 +258,7 @@ client.on("message", async message => {
                         "\n--------------------";
 
                     for (type in userArray[i]) {
-                        if (userArray[i][type]) {
+                        if (userArray[i][type] && type != "user") {
                             textMessage += "\n" + type + ": " + userArray[i][type];
                         }
                     }
@@ -364,7 +372,7 @@ client.on("message", async message => {
                 }
                 break;
             }
-        case 'allpokemonGo':
+        case 'allpokemongo':
             {
                 let displayed = false;
                 message.channel.send("All Pokemon Go Users\n--------------------\n");
@@ -418,19 +426,19 @@ client.on("message", async message => {
                             " (steam): " + userArray[i].steam + "\n");
                     }
 
-                    if (userArray[i].steam === userGameName) {
+                    if (userArray[i].epic === userGameName) {
                         userFound = true;
                         message.channel.send(message.guild.members.get(userArray[i].user).displayName +
                             " (epic): " + userArray[i].epic + "\n");
                     }
 
-                    if (userArray[i].steam === userGameName) {
+                    if (userArray[i].origin === userGameName) {
                         userFound = true;
                         message.channel.send(message.guild.members.get(userArray[i].user).displayName +
                             " (origin): " + userArray[i].origin + "\n");
                     }
 
-                    if (userArray[i].steam === userGameName) {
+                    if (userArray[i].pokemonGo === userGameName) {
                         userFound = true;
                         message.channel.send(message.guild.members.get(userArray[i].user).displayName +
                             " (pokemonGo): " + userArray[i].pokemonGo + "\n");
@@ -491,6 +499,7 @@ client.on("message", async message => {
             }
         default:
             {
+                console.log("Here");
                 message.channel.send("Type +gnbhelp for a list of Game Names Bots commands");
             }
 
@@ -504,4 +513,5 @@ client.on("message", async message => {
     });
 });
 
+client.destroy();
 client.login(config.token);
